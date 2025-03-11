@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Spectrum Generator</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: 20px;
+    }
+    svg {
+      display: block;
+    }
+    table {
+      margin-left: 20px;
+      border-collapse: collapse;
+      width: 200px;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: center;
+    }
+    td {
+      cursor: pointer;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    .highlight > td {
+      border: 1px solid chartreuse;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Color Spectrum Generator</h1>
+<label>Number of Segments:
+  <input type="range" id="numSegments" min="6" max="72" step="6" value="36">
+  <span id="numSegmentsValue">36</span>
+</label>
+<label>Hue Range:
+  <input type="range" id="hueMin" min="0" max="1" step="0.01" value="0">
+  <input type="range" id="hueMax" min="0" max="1" step="0.01" value="1">
+</label>
+<div class="container">
+  <div id="spectrum"></div>
+  <table id="colorTable">
+    <thead>
+    <tr>
+      <th>HEX Color</th>
+      <th>Check</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  function rybColorWheel(hue) {
+    const rybHueMap = [
+      [0.00, [1, 0, 0]],
+      [60 / 360, [1, 0.5, 0]],
+      [120 / 360, [1, 1, 0]],
+      [180 / 360, [0, 0.5, 0]],
+      [240 / 360, [0, 0, 1]],
+      [300 / 360, [0.5, 0, 0.5]],
+      [1.00, [1, 0, 0]]
+    ];
+    const hues = rybHueMap.map(([h, _]) => h);
+    const colors = rybHueMap.map(([_, c]) => c);
+    return d3.interpolateRgbBasis(colors.map(d => d3.rgb(d[0] * 255, d[1] * 255, d[2] * 255)))(hue % 1);
+  }
+
+  function generateSpectrum(numSegments, hueRange) {
+    const width = 400, height = 400, radius = 150;
+    const svg = d3.select("#spectrum").html("").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+    const hexColors = [];
+
+    svg.selectAll("path")
+            .data([...Array(numSegments).keys()])
+            .enter()
+            .append("path")
+            .style("cursor", "pointer")
+            .attr("d", d => {
+              const arc = d3.arc()
+                      .innerRadius(0)
+                      .outerRadius(radius)
+                      .startAngle((d / numSegments) * 2 * Math.PI)
+                      .endAngle(((d + 1) / numSegments) * 2 * Math.PI);
+              return arc();
+            })
+            .attr("fill", d => {
+              const hue = hueRange[0] + (hueRange[1] - hueRange[0]) * ((d + 0.5) / numSegments);
+              const color = rybColorWheel(hue);
+              hexColors.push(color);
+              return color;
+            })
+            .attr("stroke", "white")
+            .on("mouseover", function(event, d) {
+              const hue = hueRange[0] + (hueRange[1] - hueRange[0]) * ((d + 0.5) / numSegments);
+              const color = rybColorWheel(hue);
+              const hexColor = d3.rgb(color).formatHex();
+              const selection = d3.selectAll("tr").filter(function() {
+                return d3.select(this).text().trim() === hexColor;
+              });
+
+              selection.classed("highlight", true);
+            })
+            .on("mouseout", function() {
+              d3.selectAll("tr").classed("highlight", false);
+            })
+            .on("click", function(event, d) {
+              const hue = hueRange[0] + (hueRange[1] - hueRange[0]) * ((d + 0.5) / numSegments);
+              const color = rybColorWheel(hue);
+              const hexColor = d3.rgb(color).formatHex();
+              navigator.clipboard.writeText(hexColor);
+              alert(`${hexColor} copied`);
+            });
+
+    // Update color table
+    const tbody = document.querySelector("#colorTable tbody");
+    tbody.innerHTML = "";
+    for (let i = 0; i < numSegments; i++) {
+      const hue = hueRange[0] + (hueRange[1] - hueRange[0]) * ((i + 0.5) / numSegments);
+      const color = rybColorWheel(hue);
+      const hexColor = d3.rgb(color).formatHex();
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.style.backgroundColor = color;
+      cell.style.color = "#fff";
+      cell.textContent = hexColor;
+      cell.addEventListener("click", () => {
+        navigator.clipboard.writeText(hexColor);
+        alert(`${hexColor} copied`);
+      });
+
+      const checkboxCell = document.createElement("td");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkboxCell.appendChild(checkbox);
+      row.appendChild(cell);
+      row.appendChild(checkboxCell);
+      tbody.appendChild(row);
+    }
+
+
+    const numColors = hexColors.length;
+    const hueRangeParam = hueRange.join(",");
+
+    // Update url search params
+    const url = new URL(window.location.href);
+    url.searchParams.set("hue", hueRangeParam);
+    url.searchParams.set("count", numColors.toString());
+
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  function loadFromHash() {
+      const url = URL.parse(window.location.href);
+        const params = new URLSearchParams(url.search);
+    if (params.size>0) {
+        const hueRange = params.get('hue').split(',').map(d => parseFloat(d));
+        const numSegments = Number.parseInt(params.get('count'))
+
+      //update the sliders
+        document.getElementById("numSegments").value = numSegments;
+        document.getElementById("numSegmentsValue").textContent = numSegments;
+        document.getElementById("hueMin").value = hueRange[0];
+        document.getElementById("hueMax").value = hueRange[1];
+
+      generateSpectrum(numSegments, hueRange);
+    } else {
+      // Default parameters
+      const numSegments = 36;
+      const hueRange = [0.0, 1.0];
+      generateSpectrum(numSegments, hueRange);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const numSegmentsInput = document.getElementById("numSegments");
+    const hueMinInput = document.getElementById("hueMin");
+    const hueMaxInput = document.getElementById("hueMax");
+    const numSegmentsValue = document.getElementById("numSegmentsValue");
+
+    function updateSpectrum() {
+      const numSegments = parseInt(numSegmentsInput.value, 10);
+      const hueRange = [parseFloat(hueMinInput.value), parseFloat(hueMaxInput.value)];
+      numSegmentsValue.textContent = numSegments;
+      generateSpectrum(numSegments, hueRange);
+    }
+
+    numSegmentsInput.addEventListener("input", updateSpectrum);
+    hueMinInput.addEventListener("input", updateSpectrum);
+    hueMaxInput.addEventListener("input", updateSpectrum);
+
+    loadFromHash();
+  });
+</script>
+</body>
+</html>
