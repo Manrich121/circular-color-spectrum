@@ -56,11 +56,22 @@
       display: flex;
       flex-wrap: wrap;
     }
+    table {
+      border-collapse: collapse;
+      width: 250px;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: center;
+    }
+    td {
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 <h1>Circular Color Spectrum Generator</h1>
-<div id="output"></div>
 <div class="controls">
   <div id="colorInputs"></div>
   <button id="addColor">+</button>
@@ -68,6 +79,20 @@
   <br>
   <label for="numColors">Number of Colors: <span id="numColorsDisplay">36</span></label>
   <input type="range" id="numColors" min="3" max="48" value="36">
+  <br>
+  <br>
+<div id="output"></div>
+  <br>
+  <br>
+  <table id="colorTable">
+    <thead>
+    <tr>
+      <th>HEX Color</th>
+      <th>Select</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <script>
@@ -127,6 +152,9 @@
     const outputDiv = document.getElementById("output");
     outputDiv.innerHTML = "";
 
+    const colorTableBody = document.querySelector("#colorTable tbody");
+    colorTableBody.innerHTML = "";
+
     // Create a circular palette by appending the first color to the end.
     const circleColors = colors.concat([colors[0]]);
     // Build a D3 scale with a normalized domain [0,1]. This creates piecewise linear interpolation between colors.
@@ -137,12 +165,32 @@
 
     for (let i = 0; i < numColors; i++) {
       const t = i / numColors;
-      const hex = colorScale(t);
+      const color = colorScale(t);
+      const hex = d3.color(color).formatHex();
 
       const colorDiv = document.createElement("div");
       colorDiv.className = "color-box";
-      colorDiv.style.backgroundColor = hex;
+      colorDiv.style.backgroundColor = color;
       outputDiv.appendChild(colorDiv);
+
+      const row = document.createElement("tr");
+      const hexCell = document.createElement("td");
+      hexCell.textContent = hex
+      hexCell.style.backgroundColor = color;
+      hexCell.style.cursor = "pointer";
+      hexCell.addEventListener("click", () => {
+        navigator.clipboard.writeText(hex);
+        checkbox.checked = true;
+      });
+
+      const selectCell = document.createElement("td");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      selectCell.appendChild(checkbox);
+
+      row.appendChild(hexCell);
+      row.appendChild(selectCell);
+      colorTableBody.appendChild(row);
     }
   }
 
