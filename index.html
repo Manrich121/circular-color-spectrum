@@ -192,13 +192,38 @@
       row.appendChild(selectCell);
       colorTableBody.appendChild(row);
     }
+
+    setUrlParams(colors, numColors);
+  }
+
+  function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      colors: params.get('colors') ? params.get('colors').split('-').map(c => `#${c}`) : [],
+      numColors: params.get('numColors') ? parseInt(params.get('numColors')) : 36
+    };
+  }
+
+  function setUrlParams(colors, numColors) {
+    const params = new URLSearchParams();
+    params.set('numColors', numColors);
+    params.set('colors', colors.map(c => c.replace(/^#/, '')).join('-'));
+    window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
   }
 
   // Initialize with some default colors
-  createColorInput("#00FFFF");
-  createColorInput("#A882DD");
-  createColorInput("#0C6291");
-  createColorInput("#8DE969");
+  const params = getUrlParams();
+  if (params.colors.length > 0) {
+    document.getElementById("numColors").value = params.numColors;
+    document.getElementById("numColorsDisplay").textContent = params.numColors.toString();
+    params.colors.forEach(color => createColorInput(color));
+    // update the slider value
+  } else {
+    createColorInput("#00FFFF");
+    createColorInput("#A882DD");
+    createColorInput("#0C6291");
+    createColorInput("#8DE969");
+  }
   updateSpectrum();
 </script>
 </body>
