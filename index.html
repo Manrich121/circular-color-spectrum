@@ -12,6 +12,20 @@
       height: 30px;
       display: inline-block;
       border: 1px solid #ccc;
+      cursor: pointer;
+      position: relative;
+    }
+    .color-box:hover::after {
+      content: attr(data-hex);
+      position: absolute;
+      top: -20px;
+      left: 0;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 2px 5px;
+      font-size: 12px;
+      border-radius: 3px;
+      white-space: nowrap;
     }
     .color-input-container {
       display: flex;
@@ -157,37 +171,42 @@
 
     // Create a circular palette by appending the first color to the end.
     const circleColors = colors.concat([colors[0]]);
+
     // Build a D3 scale with a normalized domain [0,1]. This creates piecewise linear interpolation between colors.
     const colorScale = d3.scaleLinear()
             .domain(circleColors.map((_, i) => i / (circleColors.length - 1)))
             .range(circleColors)
-            .interpolate(d3.interpolateRgb);
+            .interpolate(d3.interpolateLab);
 
     for (let i = 0; i < numColors; i++) {
       const t = i / numColors;
       const color = colorScale(t);
       const hex = d3.color(color).formatHex();
 
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+
+      const copyColor = () => {
+        navigator.clipboard.writeText(hex);
+        checkbox.checked = true;
+      }
+
       const colorDiv = document.createElement("div");
       colorDiv.className = "color-box";
       colorDiv.style.backgroundColor = color;
+      colorDiv.setAttribute('data-hex', hex.toUpperCase());
+      colorDiv.addEventListener("click", copyColor);
       outputDiv.appendChild(colorDiv);
 
       const row = document.createElement("tr");
+      const selectCell = document.createElement("td");
       const hexCell = document.createElement("td");
-      hexCell.textContent = hex
+      hexCell.textContent = hex.toUpperCase();
       hexCell.style.backgroundColor = color;
       hexCell.style.cursor = "pointer";
-      hexCell.addEventListener("click", () => {
-        navigator.clipboard.writeText(hex);
-        checkbox.checked = true;
-      });
+      hexCell.addEventListener("click", copyColor);
 
-      const selectCell = document.createElement("td");
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
       selectCell.appendChild(checkbox);
-
       row.appendChild(hexCell);
       row.appendChild(selectCell);
       colorTableBody.appendChild(row);
