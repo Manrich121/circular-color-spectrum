@@ -102,6 +102,7 @@
     <thead>
     <tr>
       <th>HEX Color</th>
+      <th>CMYK</th>
       <th>Copied</th>
     </tr>
     </thead>
@@ -110,6 +111,18 @@
 </div>
 
 <script>
+
+  function hexToCmyk(hex) {
+    let rgb = d3.color(hex).rgb();
+    let r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
+    let k = 1 - Math.max(r, g, b);
+    let c = k < 1 ? (1 - r - k) / (1 - k) : 0;
+    let m = k < 1 ? (1 - g - k) / (1 - k) : 0;
+    let y = k < 1 ? (1 - b - k) / (1 - k) : 0;
+    return `C:${(c * 100).toFixed(0)} M:${(m * 100).toFixed(0)} Y:${(y * 100).toFixed(0)} K:${(k * 100).toFixed(0)}`;
+
+  }
+
   function createColorInput(hex = "#000000") {
     const container = document.createElement("div");
     container.className = "color-input-container";
@@ -182,6 +195,7 @@
       const t = i / numColors;
       const color = colorScale(t);
       const hex = d3.color(color).formatHex();
+      const cmyk = hexToCmyk(hex);
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -200,6 +214,9 @@
 
       const row = document.createElement("tr");
       const selectCell = document.createElement("td");
+      const cmykCell = document.createElement("td");
+      cmykCell.textContent = cmyk;
+
       const hexCell = document.createElement("td");
       hexCell.textContent = hex.toUpperCase();
       hexCell.style.backgroundColor = color;
@@ -208,6 +225,7 @@
 
       selectCell.appendChild(checkbox);
       row.appendChild(hexCell);
+      row.appendChild(cmykCell);
       row.appendChild(selectCell);
       colorTableBody.appendChild(row);
     }
